@@ -1,0 +1,23 @@
+[package]
+name = "destinypkg"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1"
+libc = "*"
+byteorder = "1.4"
+binrw = "0.10"
+hex = "0.4"
+rsa = "0.7.0"
+sha-1 = "0.10.0"
+sha2 = "0.10.6"
+
+ansi_term = "0.12.1"
+# anyhow = "1"
+# binrw = "0.10"
+
+[profile.dev]
+opt-level = 2
