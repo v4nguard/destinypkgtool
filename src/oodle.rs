@@ -2,7 +2,11 @@ use std::ptr::null_mut;
 
 use libc::c_void;
 
-#[link(name = "oo2core_3")]
+#[cfg(target_os = "macos")]
+compile_error!("macOS is not supported for Oodle decompression!");
+
+#[cfg_attr(target_os = "windows", link(name = "oo2core_3"))]
+#[cfg_attr(target_os = "linux", link(name = "linoodle"))]
 extern "C" {
     pub fn OodleLZ_Decompress(
         buffer: *const u8,
