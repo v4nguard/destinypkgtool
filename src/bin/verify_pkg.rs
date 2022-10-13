@@ -31,6 +31,24 @@ fn main() -> anyhow::Result<()> {
     let mut f = File::open(filename.clone())?;
     let pkg = destinypkg::package::Package::read(filename, &mut f)?;
 
+    println!("Package info:");
+    println!(" PKG ID:       {:04x}", pkg.header.pkg_id);
+    println!(" Patch ID:     {}", pkg.header.patch_id);
+    println!(" Language:     {:?}", pkg.header.language);
+    println!(
+        " Build date:   {}",
+        chrono::NaiveDateTime::from_timestamp(pkg.header.build_time as i64, 0)
+    );
+    println!(" Tool string:  {}", pkg.header.tool_string);
+    println!(" Entries:      {}", pkg.header.entry_table_size);
+    println!(
+        " Blocks:       {} ({} compressed)",
+        pkg.header.block_table_size,
+        pkg.blocks.iter().filter(|bh| bh.flags & 0x100 != 0).count()
+    );
+
+    println!();
+
     let mut hasher = sha2::Sha256::default();
     let mut headerdata = [0u8; 320];
     f.seek(SeekFrom::Start(0))?;
