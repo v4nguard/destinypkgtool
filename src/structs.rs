@@ -13,8 +13,8 @@ pub struct PackageHeader {
     pub patch_id: u16,
     pub localization_type: u16,
 
-    _tool_string_raw: [u8; 128],
-    #[br(calc = String::from_utf8_lossy(&_tool_string_raw).into_owned().trim_end_matches('\0').to_owned())]
+    #[brw(count = 128)]
+    #[br(map = |s: Vec<u8>| String::from_utf8_lossy(&s).to_string().trim_end_matches('\0').to_string())]
     pub tool_string: String,
 
     pub _unka4: u32,
