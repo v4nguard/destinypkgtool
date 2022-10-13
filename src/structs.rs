@@ -1,4 +1,5 @@
 use binrw::{binrw, BinRead};
+use std::io::SeekFrom;
 
 #[derive(BinRead, Debug)]
 #[br(repr = u16)]
@@ -42,6 +43,10 @@ pub struct PackageHeader {
     pub block_table_size: u32,
     pub block_table_offset: u32,
     pub block_table_hash: [u8; 20],
+
+
+    #[br(seek_before = SeekFrom::Start(0x13c))]
+    pub file_size: u32,
 }
 
 #[derive(BinRead, Debug)]

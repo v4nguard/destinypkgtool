@@ -1,3 +1,5 @@
+#![feature(seek_stream_len)]
+
 use rsa::{pkcs1::DecodeRsaPublicKey, PaddingScheme, PublicKey};
 use sha2::digest::DynDigest;
 use std::{
@@ -48,6 +50,8 @@ fn main() -> anyhow::Result<()> {
     );
 
     println!();
+
+    check_result!("File size", pkg.header.file_size as u64 == f.stream_len()?);
 
     let mut hasher = sha2::Sha256::default();
     let mut headerdata = [0u8; 320];
