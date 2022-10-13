@@ -80,4 +80,45 @@ impl Package {
             Ok(blockdata)
         }
     }
+
+    pub fn get_entry_data(&self, entry: &EntryHeader) -> Result<Vec<u8>> {
+        let mut buffer = Vec::with_capacity(entry.file_size as usize);
+        let mut current_offset = 0usize;
+        let mut current_block = entry.starting_block;
+
+        while current_offset < entry.file_size as usize {
+            let block_data = self.get_block(current_block as usize)?;
+            let remaining_bytes = entry.file_size as usize - current_offset;
+
+            if current_block == entry.starting_block {
+                // If we're on the starting block, we might not start at the beginning of the block
+                let copy_size;
+                let block_start_offset = (entry.starting_block_offset * 16) as usize;
+                let block_remaining = block_data.len() - block_start_offset;
+                if block_remaining < remaining_bytes {
+                    copy_size = block_remaining;
+                } else {
+                    copy_size = remaining_bytes;
+                }
+
+                buffer.extend_from_slice(
+                    &block_data[block_start_offset..block_start_offset + copy_size],
+                );
+
+                current_offset += copy_size;
+            } else if remaining_bytes < block_data.len() {
+                // If the block has more bytes than we need, it means we're on the last block
+                buffer.extend_from_slice(&block_data[..remaining_bytes]);
+                current_offset += remaining_bytes;
+            } else {
+                // If the previous 2 conditions failed, it means this whole block belongs to the file
+                buffer.extend_from_slice(&block_data[..]);
+                current_offset += block_data.len();
+            }
+
+            current_block += 1;
+        }
+
+        Ok(buffer)
+    }
 }
