@@ -9,9 +9,9 @@ macro_rules! check_result {
     ($m:expr, $v:expr) => {
         print!("{:16} - ", $m);
         if $v {
-            println!("{}\t", ansi_term::Color::Green.bold().paint("ok"));
+            println!("{}   ", ansi_term::Color::Green.bold().paint("ok"));
         } else {
-            println!("{}\t", ansi_term::Color::Red.bold().paint("FAILED"));
+            println!("{}   ", ansi_term::Color::Red.bold().paint("FAILED"));
         }
     };
 }
@@ -29,12 +29,8 @@ macro_rules! print_progress {
 fn main() -> anyhow::Result<()> {
     let filename = std::env::args().nth(1).unwrap();
     let mut f = File::open(filename.clone())?;
-    // let pkgheader = dpu::structs::PackageHeader::read_be(&mut f)?;
     let pkg = destinypkg::package::Package::read(filename, &mut f)?;
-    // println!("{:?}", pkgheader);
 
-    // let mut headerhash = [0u8; 32];
-    // f.read()
     let mut hasher = sha2::Sha256::default();
     let mut headerdata = [0u8; 320];
     f.seek(SeekFrom::Start(0))?;
@@ -43,7 +39,6 @@ fn main() -> anyhow::Result<()> {
     hasher.update(&headerdata);
     let headerhash = hasher.finalize_reset();
 
-    // let pubkey = rsa::RsaPublicKey::from_public_key_pem(include_str!("../../pkg_pubkey.pem"))?;
     let pubkey = rsa::RsaPublicKey::from_pkcs1_der(include_bytes!("../../pkg_pubkey.bin"))?;
     f.seek(SeekFrom::Start(pkg.header.header_signature_offset as u64))?;
     let mut sigdata = [0u8; 256];
@@ -81,12 +76,11 @@ fn main() -> anyhow::Result<()> {
     );
 
     let mut failed_blocks = 0;
-    for i in 0..pkg.header.block_table_size as usize {
-        print_progress!("Block hashes", i, pkg.header.block_table_size);
+    for i in 0..pkg.blocks.len() {
+        print_progress!("Block hashes", i, pkg.blocks.len());
         let blockdata = pkg.get_block_raw(i)?;
         hasher.update(&blockdata);
         if hasher.finalize_reset() != Box::new(pkg.blocks[i].hash) {
-            println!("Block {:?} failed", pkg.blocks[i]);
             failed_blocks += 1;
         }
     }
@@ -95,7 +89,28 @@ fn main() -> anyhow::Result<()> {
     if failed_blocks != 0 {
         println!(
             "\tFailed blocks: {} out of {}",
-            failed_blocks, pkg.header.block_table_size
+            failed_blocks,
+            pkg.blocks.len()
+        );
+    }
+
+    let mut failed_blocks = 0;
+    for (i, bh) in pkg.blocks.iter().enumerate() {
+        if (bh.flags & 0x100) != 0 {
+            print_progress!("Compressed blocks", i, pkg.blocks.len());
+            let r = pkg.get_block(i);
+            if r.is_err() {
+                failed_blocks += 1;
+            }
+        }
+    }
+    print!("\r");
+    check_result!("Compressed blocks", failed_blocks == 0);
+    if failed_blocks != 0 {
+        println!(
+            "\tFailed blocks: {} out of {}",
+            failed_blocks,
+            pkg.blocks.iter().filter(|bh| bh.flags & 0x100 != 0).count()
         );
     }
 

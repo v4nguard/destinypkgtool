@@ -56,10 +56,6 @@ impl Package {
 
     pub fn get_block_raw(&self, block_index: usize) -> Result<Vec<u8>> {
         let bh = &self.blocks[block_index];
-        // println!(
-        //     "Opening {}",
-        //     format!("{}_{}.pkg", self.filename_base, bh.patch_id)
-        // );
         let mut f = File::open(format!("{}_{}.pkg", self.filename_base, bh.patch_id))?;
 
         f.seek(SeekFrom::Start(bh.offset as u64))?;
@@ -77,7 +73,6 @@ impl Package {
             let mut decomp_buffer = vec![0; BLOCK_SIZE];
             let decompressed_size = oodle::decompress(&blockdata, &mut decomp_buffer);
             if decompressed_size == 0 {
-                println!("Oodle decompression failed");
                 anyhow::bail!("Oodle decompression failed");
             }
             Ok(decomp_buffer)
