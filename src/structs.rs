@@ -1,6 +1,19 @@
 use binrw::{binrw, BinRead};
 
 #[derive(BinRead, Debug)]
+#[br(repr = u16)]
+pub enum PackageLanguage {
+    None = 0,
+    English = 1,
+    French = 2,
+    Italian = 3,
+    German = 4,
+    Spanish = 5,
+    Japanese = 6,
+    Portuguese = 7,
+}
+
+#[derive(BinRead, Debug)]
 #[br(big)]
 pub struct PackageHeader {
     pub magic: u32,
@@ -8,10 +21,10 @@ pub struct PackageHeader {
     pub _unk6: u16,
     pub _unk8: u64,
     pub build_time: u64,
-    pub _unk18: u32,
+    pub _unk_buildid: u32,
     pub _unk1c: u32,
     pub patch_id: u16,
-    pub localization_type: u16,
+    pub language: PackageLanguage,
 
     #[brw(count = 128)]
     #[br(map = |s: Vec<u8>| String::from_utf8_lossy(&s).to_string().trim_end_matches('\0').to_string())]
