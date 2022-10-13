@@ -7,7 +7,7 @@ use std::{
 
 macro_rules! check_result {
     ($m:expr, $v:expr) => {
-        print!("{:16} - ", $m);
+        print!("{:18} - ", $m);
         if $v {
             println!("{}   ", ansi_term::Color::Green.bold().paint("ok"));
         } else {
@@ -19,7 +19,7 @@ macro_rules! check_result {
 macro_rules! print_progress {
     ($m:expr, $current:expr, $count:expr) => {
         print!(
-            "\r{:16} - {:.1}%",
+            "\r{:18} - {:.0}%",
             $m,
             ($current as f32 / $count as f32) * 100.0
         );
@@ -129,6 +129,30 @@ fn main() -> anyhow::Result<()> {
             "\tFailed blocks: {} out of {}",
             failed_blocks,
             pkg.blocks.iter().filter(|bh| bh.flags & 0x100 != 0).count()
+        );
+    }
+
+    // Check if all file entries point to valid blocks
+    let mut bad_entries = 0;
+    for (i, eh) in pkg.entries.iter().enumerate() {
+        print_progress!("File entries", i, pkg.entries.len());
+        if eh.starting_block as usize > pkg.blocks.len() {
+            bad_entries += 1;
+            continue;
+        }
+
+        if pkg.get_entry_data(eh).is_err() {
+            bad_entries += 1;
+            continue;
+        }
+    }
+    print!("\r");
+    check_result!("File entries", bad_entries == 0);
+    if bad_entries != 0 {
+        println!(
+            "\tFailed entries: {} out of {}",
+            bad_entries,
+            pkg.entries.len()
         );
     }
 
