@@ -1,34 +1,44 @@
 use std::ptr::null_mut;
 
+use lazy_static::lazy_static;
 use libc::c_void;
+use libloading::*;
+
+type OodleLzDecompress = unsafe extern "C" fn(
+    *const u8,
+    i64,
+    *mut u8,
+    i64,
+    i32,
+    i32,
+    i64,
+    *mut c_void,
+    *mut c_void,
+    *mut c_void,
+    *mut c_void,
+    *mut c_void,
+    *const c_void,
+    i32,
+) -> i64;
 
 #[cfg(target_os = "macos")]
 compile_error!("macOS is not supported for Oodle decompression!");
 
-#[cfg_attr(target_os = "windows", link(name = "oo2core_3"))]
-#[cfg_attr(target_os = "linux", link(name = "linoodle"))]
-extern "C" {
-    pub fn OodleLZ_Decompress(
-        buffer: *const u8,
-        buffer_size: i64,
-        output_buffer: *mut u8,
-        output_buffer_size: i64,
-        a: i32,
-        b: i32,
-        c: i64,
-        d: *mut c_void,
-        e: *mut c_void,
-        f: *mut c_void,
-        g: *mut c_void,
-        h: *mut c_void,
-        i: *const c_void,
-        thread_module: i32,
-    ) -> i64;
+#[cfg(target_os = "linux")]
+const OODLE_PATH: &'static str = "liblinoodle.so";
+
+#[cfg(target_os = "windows")]
+const OODLE_PATH: &'static str = "oo2core_3_win64.dll";
+
+lazy_static! {
+    static ref OODLE_LIB: Library = unsafe { Library::new(OODLE_PATH).unwrap() };
+    static ref OODLELZ_DECOMPRESS: Symbol<'static, OodleLzDecompress> =
+        unsafe { OODLE_LIB.get(b"OodleLZ_Decompress").unwrap() };
 }
 
 pub fn decompress(buffer: &[u8], output_buffer: &mut [u8]) -> i64 {
     unsafe {
-        OodleLZ_Decompress(
+        OODLELZ_DECOMPRESS(
             buffer.as_ptr() as *mut u8,
             buffer.len() as i64,
             output_buffer.as_mut_ptr(),
